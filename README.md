@@ -29,4 +29,5 @@ Using some commands of pyBigWig to handle it, the final results of two versions 
 | bw.stats('chr1' , 1, 4,nBins=2) | [0.0,  0.0] | [None, None]|
 |bw.stats('chr1' , 4, 8,nBins=2)|[-1.0, -1.0]|[-1.0, -1.0]|
 | bw.stats('chr1' , 4, 16,nBins=4)) |[-1.0, -0.3333333333333333, 0.0, 0.0] | [-1.0, -1.0, None, None] |
+
 According to the list we can find the previous version can't handle the site without value, so when we get its value it will print `nan`,and when we calculate the mean of the region of `[4,16]` the previous version will ignore sites without values so it will print `-1.0` which is not same as the true mean. 
