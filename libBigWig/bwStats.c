@@ -438,7 +438,7 @@ double *bwStatsFromZoom(bigWigFile_t *fp, int32_t level, uint32_t tid, uint32_t 
         end2 = start + ((double)(end-start)*(i+1))/((int) nBins);
         blocks = walkRTreeNodes(fp, fp->hdr->zoomHdrs->idx[level]->root, tid, pos, end2);
         if(!blocks) goto error;
-
+        //fprintf(stderr, " pos:%d, end2:%d\n", pos, end2);
         switch(type) {
         case 0:
             //mean
@@ -487,11 +487,11 @@ double *bwStatsFromFull(bigWigFile_t *fp, char *chrom, uint32_t start, uint32_t 
     double *output = malloc(sizeof(double)*nBins);
     uint32_t i, pos = start, end2;
     if(!output) return NULL;
-
+    
     for(i=0; i<nBins; i++) {
         end2 = start + ((double)(end-start)*(i+1))/((int) nBins);
         ints = bwGetOverlappingIntervals(fp, chrom, pos, end2);
-
+        //fprintf(stderr, " pos:%d, end2:%d\n", pos, end2);
         if(!ints) {
             output[i] = strtod("NaN", NULL);
             continue;

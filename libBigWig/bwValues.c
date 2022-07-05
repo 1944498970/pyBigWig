@@ -345,6 +345,7 @@ void bbDestroyOverlappingEntries(bbOverlappingEntries_t *o) {
 
 //Returns NULL on error, in which case o has been free()d
 static bwOverlappingIntervals_t *pushIntervals(bwOverlappingIntervals_t *o, uint32_t start, uint32_t end, float value) {
+    //fprintf(stderr, "pushintervals start:%d end:%d value:%f\n",start,end,value);
     if(o->l+1 >= o->m) {
         o->m = roundup(o->l+1);
         o->start = realloc(o->start, o->m * sizeof(uint32_t));
@@ -395,14 +396,21 @@ bwOverlappingIntervals_t *bwGetOverlappingIntervalsCore(bigWigFile_t *fp, bwOver
     uLongf sz = fp->hdr->bufSize, tmp;
     void *buf = NULL, *compBuf = NULL;
     uint32_t start = 0, end , *p;
+    uint32_t pstart = 0, pend=0;
     float value;
     bwDataHeader_t hdr;
     bwOverlappingIntervals_t *output = calloc(1, sizeof(bwOverlappingIntervals_t));
-
     if(!output) goto error;
 
-    if(!o) return output;
-    if(!o->n) return output;
+    if(!o) 
+    {
+        return output;
+    }
+    if(!o->n) 
+     {
+        if(!pushIntervals(output, ostart, oend, 0)) goto error;
+        return output;
+    }
 
     if(sz) {
         compressed = 1;
@@ -468,10 +476,51 @@ bwOverlappingIntervals_t *bwGetOverlappingIntervalsCore(bigWigFile_t *fp, bwOver
 
             if(end <= ostart || start >= oend) continue;
             //Push the overlap
-            if(!pushIntervals(output, start, end, value)) goto error;
+            //判断现在加入的行的起始位置和终止位置是不是和上次加入的是相邻的，如果相邻直接加如果不相邻就把gap计算出来送入零
+            if(start>pend&&start>ostart)//判断是否有gap
+            {
+                //fprintf(stderr,"%d,%d",pend,ostart);
+                if(pend==0)
+                {
+                    if(!pushIntervals(output, ostart, start, 0)) goto error;
+                }
+                else
+                {
+                if(!pushIntervals(output, pend, start, 0))
+                {
+                 goto error;//在interval里面加0
+                }
+                }
+                //fprintf(stderr, "start>pend      pushintervals start:%d end:%d value%d\n",pend, start, 0);
+            }
+            //fprintf(stderr, "%d,%d,%f",start, end, value);
+            if(!pushIntervals(output, start, end, value))
+                goto error;            
+            else
+                {
+                    pstart=start;
+                    pend=end;
+                }
+            //fprintf(stderr, "start<pend      pushintervals start:%d end:%d value%d\n",start, end, value);
         }
     }
 
+    //fprintf(stderr," %d     %d\n",pend,oend);
+    if(pend<oend)//判断是否到了oend位置，如果没到就
+    {
+        if(pend>ostart)//判断push起点
+        {
+            if(!pushIntervals(output, pend, oend, 0)) goto error;//在interval里面加0
+            //fprintf(stderr, "pend>ostart      pushintervals start:%d end:%d value%d\n",pend, oend, 0);
+        }
+        else
+        {
+            if(!pushIntervals(output, ostart, oend, 0)) goto error;//在interval里面加0
+            //fprintf(stderr, "pend<ostart      pushintervals start:%d end:%d value%d\n",ostart, oend, 0);
+        }
+       
+    }
+    
     if(compressed && buf) free(buf);
     if(compBuf) free(compBuf);
     return output;
